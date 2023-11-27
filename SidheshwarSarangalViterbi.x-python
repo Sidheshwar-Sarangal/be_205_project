@@ -1,0 +1,98 @@
+import sys
+import os
+import math
+import numpy as np
+
+states = { "s": 0, "E": 1, "5": 2, "I" : 3, "e": 4}
+id2state = {0: "s", 1: "E", 2: "5", 3: "I", 4: "e"}
+
+state_transition_prob = np.array([[0.0, 1.0, 0.0, 0.0, 0.0], 
+                                  [0.0, 0.9, 0.1, 0.0, 0.0], 
+                                  [0.0, 0.0, 0.0, 1.0, 0.0],
+                                  [0.0, 0.0, 0.0, 0.9, 0.1],
+                                  [0.0, 0.0, 0.0, 0.0, 0.0]]) 
+emission_nuc_codes = {'A': 0, 
+                      'C': 1, 
+                      'G': 2, 
+                      'T': 3}
+
+emission_probs = np.array([[0.00, 0.00, 0.00, 0.00], 
+                           [0.25, 0.25, 0.25, 0.25],
+                           [0.05, 0.00, 0.95, 0.00],
+                           [0.40, 0.10, 0.10, 0.40],
+                           [0.00, 0.00, 0.00, 0.00]]) 
+
+query_sequence = "CTTCATGTGAAAGCAGACGTAAGTCA"
+
+
+
+viterbi_value_matrix = np.zeros((len(states), len(query_sequence)))
+viterbi_trace_matrix = np.zeros((len(states), len(query_sequence)), dtype = int)
+
+viterbi_value_matrix[1,0] = math.log(0.25)
+viterbi_trace_matrix[0,0] = 0
+viterbi_trace_matrix[1,0] = 1
+viterbi_trace_matrix[2,0] = 2
+viterbi_trace_matrix[3,0] = 3
+viterbi_trace_matrix[4,0] = 4
+
+def calculate_prob_for_a_node(row, col):
+    max_prob = -float('inf')
+    max_trace = -1
+
+    for prev_state in range(len(states)):
+        for current_state in range(len(states)):
+            transition_prob = state_transition_prob[prev_state][current_state]
+            emission_prob = emission_probs[current_state][emission_nuc_codes[query_sequence[col]]]
+            epsilon = 1e-5
+            transition_prob = max(epsilon, transition_prob)
+            emission_prob = max(epsilon, emission_prob)
+
+            current_prob = viterbi_value_matrix[prev_state][col - 1] + math.log(transition_prob * emission_prob)
+
+            if current_prob > max_prob:
+                max_prob = current_prob
+                max_trace = prev_state
+
+    return max_prob, max_trace
+
+for col in range(len(query_sequence)):
+    for current_state in range(len(states)):
+        max_prob, max_trace = calculate_prob_for_a_node(current_state, col)
+        viterbi_value_matrix[current_state][col] = max_prob
+        viterbi_trace_matrix[current_state][col] = max_trace
+
+final_state = np.argmax(viterbi_value_matrix[:, -1])
+state_path = [final_state]
+
+for col in range(len(query_sequence) - 1, 0, -1):
+    final_state = viterbi_trace_matrix[final_state][col]
+#     print(final_state)
+    state_path.insert(0, final_state)
+
+state_labels = [id2state[state] for state in state_path]
+# print(state_labels)
+state_path_string = "".join(state_labels)
+
+
+print(state_path_string)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
